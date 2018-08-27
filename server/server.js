@@ -11,7 +11,12 @@ app.use(bodyParser.json());
 
 app.post("/todos",(req,res)=>{
  let todo = new Todo(req.body);
- todo.save().then(data => res.send(data), err =>res.status(400).send(err));
+ todo.save()
+  .then(data => res.send(data))
+  .catch(err => res.status(400).send(err));
 });
 
 app.listen(3000, ()=>console.log("listening on port 3000 ..."));
+
+
+module.exports = {app};
