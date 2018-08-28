@@ -35,10 +35,10 @@ describe("POST /todos tests", ()=>{
        if(err)
         return done(err);
       
-       Todo.find({text})
+       Todo.find()
         .then(todos => {
-          expect(todos.length).toBe(1);
-          expect(todos[0].text).toBe(text);
+          expect(todos.length).toBe(3);
+          expect(todos[2].text).toBe(text);
           done();
         })      
         .catch(e => done(e));
@@ -106,3 +106,44 @@ describe("GET /todos/:id", ()=>{
      .end(done);
   });
 });
+
+
+describe('DELETE /todos/:id',()=>{
+
+  it('should delete the todo doc', done=>{
+    let hexId = testTasks[0]._id.toHexString();
+    request(app)
+     .delete(`/todos/${hexId}`)
+     .expect(200)
+     .expect(res => {
+       expect(res.body.todo._id).toBe(hexId);
+     })
+     .end((err,res)=>{
+       if(err)
+        return done(err);
+       
+       Todo.findById(hexId)
+        .then(todo=>{
+          expect(todo).toNotExist();
+          done();
+        })
+        .catch(e => done(e));
+     });
+  });
+
+  it('should return 404 and proper error message for invalid id', done=>{
+    request(app)
+     .delete(`/todos/123`)
+     .expect(404)
+     .expect(res => expect(res.body.message).toBe("Invalid todo Id"))
+     .end(done);
+  });
+
+  it('should return 404 and proper error message if no todo found', done=>{
+    request(app)
+     .delete(`/todos/${(new ObjectID()).toHexString()}`)
+     .expect(404)
+     .expect(res => expect(res.body.message).toBe("No todo exists with the given id"))
+     .end(done);
+  });
+})

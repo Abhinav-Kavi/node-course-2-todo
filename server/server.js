@@ -40,6 +40,22 @@ app.get("/todos/:id",(req,res)=>{
    .catch(err => res.status(400).send());
 });
 
+app.delete("/todos/:id",(req,res)=>{
+  let id = req.params.id;
+
+  if(!ObjectID.isValid(id))
+   return res.status(404).send({'message':"Invalid todo Id"});
+
+  Todo.findByIdAndRemove(id)
+   .then(removedTodo =>{
+     if(!removedTodo)
+      return res.status(404).send({'message':"No todo exists with the given id"});
+     
+     res.send({todo: removedTodo});
+   })
+   .catch(err => res.status(400).send());
+});
+
 app.listen(port, ()=>console.log(`Started on port ${port} ...`));
 
 
