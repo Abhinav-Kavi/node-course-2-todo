@@ -1,13 +1,16 @@
 const expect = require('expect');
 const request = require('supertest');
+const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 
 let testTasks = [{
+  _id : new ObjectID(),
 	"text": "test task 1"
 },
 {
+  _id : new ObjectID(),
 	"text": "test task 2"
 }];
 
@@ -71,5 +74,35 @@ describe("GET /todos", ()=>{
       .expect(200)
       .expect(res=>expect(res.body.todos.length).toBe(2))
       .end(done)
+  });
+});
+
+
+describe("GET /todos/:id", ()=>{
+ 
+  it('should return the todo doc', done=>{
+    request(app)
+     .get(`/todos/${testTasks[0]._id.toHexString()}`)
+     .expect(200)
+     .expect(res=>{
+       expect(res.body.todo.text).toBe(testTasks[0].text);
+     })
+     .end(done);
+  });
+
+  it('should return 404 and proper error message for invalid id', done=>{
+    request(app)
+     .get(`/todos/123`)
+     .expect(404)
+     .expect(res => expect(res.body.message).toBe("Invalid todo Id"))
+     .end(done);
+  });
+
+  it('should return 404 and proper error message if no todo found', done=>{
+    request(app)
+     .get(`/todos/${(new ObjectID()).toHexString()}`)
+     .expect(404)
+     .expect(res => expect(res.body.message).toBe("No todo exists with the given id"))
+     .end(done);
   });
 });
