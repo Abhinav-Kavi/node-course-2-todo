@@ -7,11 +7,13 @@ const {Todo} = require('./../models/todo');
 
 let testTasks = [{
   _id : new ObjectID(),
-	"text": "test task 1"
+	text: "test task 1"
 },
 {
   _id : new ObjectID(),
-	"text": "test task 2"
+  text: "test task 2",
+  completed : true,
+  completedAt : 123
 }];
 
 beforeEach((done)=>{
@@ -146,4 +148,37 @@ describe('DELETE /todos/:id',()=>{
      .expect(res => expect(res.body.message).toBe("No todo exists with the given id"))
      .end(done);
   });
-})
+});
+
+describe("PATCH /todos/:id",()=>{
+  
+  it("should update the todo", done =>{
+    let hexId = testTasks[0]._id.toHexString();
+    let data = {text: "Updated test task 1", completed: true};
+    request(app)
+     .patch(`/todos/${hexId}`)
+     .send(data)
+     .expect(200)
+     .expect(res=>{
+       expect(res.body.todo.text).toBe(data.text);
+       expect(res.body.todo.completed).toBe(data.completed);
+       expect(res.body.todo.completedAt).toBeA("number");
+     })
+     .end(done);
+  });
+
+  it("should clear completedAt when todo is not completed", done=>{
+    let hexId = testTasks[1]._id.toHexString();
+    let data = {text: "Updated test task 2", completed: false};
+    request(app)
+    .patch(`/todos/${hexId}`)
+    .send(data)
+    .expect(200)
+    .expect(res=>{
+      expect(res.body.todo.text).toBe(data.text);
+      expect(res.body.todo.completed).toBe(data.completed);
+      expect(res.body.todo.completedAt).toNotExist();
+    })
+    .end(done);
+  });
+});
