@@ -71,6 +71,28 @@ userSchema.statics.findByToken = function(token){
         });
 };
 
+userSchema.statics.findByCredentials = function(email, password){
+  let User = this;
+  let userDetails;
+
+  return User.findOne({email})
+   .then(user => {
+     if(!user)
+      return Promise.reject(400);
+ 
+     userDetails = user; 
+     return bcrypt.compare(password,user.password);      
+   })
+   .then(result => {
+     if(!result)
+      return Promise.reject(400);
+       
+     return Promise.resolve(userDetails);
+   });
+
+};
+
+
 //Mongoose middleware --- used to execute some code on a model before a particular action like save/update etc is executed
 
 userSchema.pre("save", function(next){
