@@ -4,23 +4,13 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
+const {User} = require('./../models/user');
+const {testTodos, populateTodos,testUsers, populateUsers} = require('./seed/seed');
 
-let testTasks = [{
-  _id : new ObjectID(),
-	text: "test task 1"
-},
-{
-  _id : new ObjectID(),
-  text: "test task 2",
-  completed : true,
-  completedAt : 123
-}];
 
-beforeEach((done)=>{
-  Todo.remove({}).then(()=>{
-    return Todo.insertMany(testTasks);    
-  }).then(()=> done());
-})
+beforeEach(populateUsers);
+beforeEach(populateTodos);
+
 
 describe("POST /todos tests", ()=>{
  
@@ -33,7 +23,7 @@ describe("POST /todos tests", ()=>{
      .expect(res=>{
        expect(res.body.text).toBe(text);
      })
-     .end((err,res)=>{
+     .end(err =>{
        if(err)
         return done(err);
       
@@ -52,7 +42,7 @@ describe("POST /todos tests", ()=>{
      .post('/todos')
      .send({})
      .expect(400)
-     .end((err,res)=>{
+     .end(err =>{
        if(err)
         return done(err);
 
@@ -84,10 +74,10 @@ describe("GET /todos/:id", ()=>{
  
   it('should return the todo doc', done=>{
     request(app)
-     .get(`/todos/${testTasks[0]._id.toHexString()}`)
+     .get(`/todos/${testTodos[0]._id.toHexString()}`)
      .expect(200)
      .expect(res=>{
-       expect(res.body.todo.text).toBe(testTasks[0].text);
+       expect(res.body.todo.text).toBe(testTodos[0].text);
      })
      .end(done);
   });
@@ -113,14 +103,14 @@ describe("GET /todos/:id", ()=>{
 describe('DELETE /todos/:id',()=>{
 
   it('should delete the todo doc', done=>{
-    let hexId = testTasks[0]._id.toHexString();
+    let hexId = testTodos[0]._id.toHexString();
     request(app)
      .delete(`/todos/${hexId}`)
      .expect(200)
      .expect(res => {
        expect(res.body.todo._id).toBe(hexId);
      })
-     .end((err,res)=>{
+     .end(err =>{
        if(err)
         return done(err);
        
@@ -153,7 +143,7 @@ describe('DELETE /todos/:id',()=>{
 describe("PATCH /todos/:id",()=>{
   
   it("should update the todo", done =>{
-    let hexId = testTasks[0]._id.toHexString();
+    let hexId = testTodos[0]._id.toHexString();
     let data = {text: "Updated test task 1", completed: true};
     request(app)
      .patch(`/todos/${hexId}`)
@@ -168,7 +158,7 @@ describe("PATCH /todos/:id",()=>{
   });
 
   it("should clear completedAt when todo is not completed", done=>{
-    let hexId = testTasks[1]._id.toHexString();
+    let hexId = testTodos[1]._id.toHexString();
     let data = {text: "Updated test task 2", completed: false};
     request(app)
     .patch(`/todos/${hexId}`)
@@ -180,5 +170,90 @@ describe("PATCH /todos/:id",()=>{
       expect(res.body.todo.completedAt).toNotExist();
     })
     .end(done);
+  });
+});
+
+
+describe("GET /users/me",()=>{
+  
+  it('should return the user if authenticated',done =>{
+    request(app)
+     .get('/users/me')
+     .set('x-auth',testUsers[0].tokens[0].token)
+     .expect(200)
+     .expect(res=>{
+       expect(res.body._id).toBe(testUsers[0]._id.toHexString());
+       expect(res.body.email).toBe(testUsers[0].email);
+     })
+     .end(done);
+  });
+
+  it('should return 401 if not authenticated',done =>{
+    request(app)
+     .get('/users/me')
+     .expect(401)
+     .expect(res => expect(res.body).toEqual({}))
+     .end(done);
+  });
+});
+
+describe("GET /users", ()=>{
+  it('should create a user', done=>{
+    let requestBody = {
+      "email": "test@gmail.com",
+      "password": "test123"
+     };
+    request(app)
+     .post('/users')
+     .send(requestBody)
+     .expect(200)
+     .expect(res =>{
+      expect(res.headers['x-auth']).toExist();
+      expect(res.body._id).toExist();
+      expect(res.body.email).toBe(requestBody.email);
+     })
+     .end(err =>{
+       if(err)
+        return done(err);
+      
+       User.findOne({email:requestBody.email})
+        .then(user => {
+          expect(user).toExist();
+          expect(user.password).toNotBe(requestBody.password);
+          done();
+        })
+        .catch(e => done(e));
+     });
+  });
+
+  it('should return validation error if request invalid', done => {
+    let requestBody = {
+      "email": "test@gmail.com",
+      "password": "test"
+     };
+     request(app)
+     .post('/users')
+     .send(requestBody)
+     .expect(400)
+     .expect(res =>{
+       expect(res.body._message).toEqual("User validation failed");
+     })
+     .end(done);
+  });
+
+  it('should not create user if email in use',done=>{
+    let requestBody = {
+      "email": testUsers[0].email,
+      "password": "test123"
+     };
+     request(app)
+     .post('/users')
+     .send(requestBody)
+     .expect(400)
+     .expect(res =>{
+       expect(res.body.name).toEqual("MongoError");
+       expect(res.body.message).toEqual(`E11000 duplicate key error collection: TodoAppTest.users index: email_1 dup key: { : \"${requestBody.email}\" }`);
+     })
+     .end(done);
   });
 });

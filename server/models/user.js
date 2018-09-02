@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 
 //User model
@@ -69,6 +70,26 @@ userSchema.statics.findByToken = function(token){
         'tokens.access': decodedToken.access
         });
 };
+
+//Mongoose middleware --- used to execute some code on a model before a particular action like save/update etc is executed
+
+userSchema.pre("save", function(next){
+  let user = this;
+
+ //we need to compute hash only if the password has been changed otherwise this method will keep hashing the already hashed password if save is called for updating any property other than password
+ 
+  if(user.isModified('password')) {
+    bcrypt.genSalt(10)
+     .then(salt=> bcrypt.hash(user.password,salt))
+     .then(hash =>{
+       user.password = hash;
+       next();
+     })
+     .catch(e => console.log(e));
+  }
+  else 
+   next();
+});
 
 let User = mongoose.model("User",userSchema);
 
