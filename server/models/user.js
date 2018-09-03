@@ -92,6 +92,16 @@ userSchema.statics.findByCredentials = function(email, password){
 
 };
 
+userSchema.methods.removeToken = function(token){
+  let user = this;
+
+  return user.update({
+    $pull : {
+      tokens : {token}
+    }
+  });
+};
+
 
 //Mongoose middleware --- used to execute some code on a model before a particular action like save/update etc is executed
 
