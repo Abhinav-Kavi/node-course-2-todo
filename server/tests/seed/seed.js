@@ -20,17 +20,23 @@ const testUsers = [{
   _id: testUser2_id,
   email : 'testUser2@gmail.com',
   password: 'testUser2_password',
+  tokens : [{
+    access: 'auth',
+    token : jwt.sign({_id: testUser2_id, access:'auth' }, "secret_key")
+  }]
 }];
 
 const testTodos = [{
   _id : new ObjectID(),
-	text: "test task 1"
+  text: "test task 1",
+  _creator: testUser1_id
 },
 {
   _id : new ObjectID(),
   text: "test task 2",
   completed : true,
-  completedAt : 123
+  completedAt : 123,
+  _creator: testUser2_id
 }];
 
 let populateTodos = (done)=>{
